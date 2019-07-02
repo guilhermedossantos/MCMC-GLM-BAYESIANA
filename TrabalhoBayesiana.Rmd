@@ -11,12 +11,12 @@ knitr::opts_knit$set(root.dir = "C:\\Users\\ibge\\Downloads\\Bayesiana\\MCMC-GLM
 library(coda)
 
 
-load("covergiu_6mi.RData")
+#load("covergiu_6mi.RData")
 ```
 
 #Algotitmo de Gibbs usando Metropolis-Hasting para gerar condicionais completas
 
-## FDados
+## Dados
 ```{r}
 #dados
 n <- 13
@@ -25,11 +25,24 @@ x <- 1:13
 y <- c(12, 14, 33, 50, 67, 74, 123, 141, 165, 204, 253, 246, 240)
 ```
 
+## Estimativa clássica 
+
+### Estimativa pontual
+```{r}
+modelo <- glm(y ~ x, family = poisson)
+summary(modelo)
+```
+
+### Intervalos de confiança
+```{r}
+confint(modelo)
+```
+
 ## Algoritmos
 
 ```{r}
 #número de iterações
-N <- 6*10^6
+N <- 3*10^6
 
 #variância da distribuição a priori proposta
 k <- 200
@@ -46,66 +59,46 @@ cont_b3 <- 0
 # 
 # cc_b3 <- function(b1,b2,b3){prod(b1 + b2*x + b3*x^2)*exp(- b3*(819 + (b3/(2*k))))}
 
-cc_b1 <- function(b1, b2,b3){sum(y*(b1+b2*x+b3*(x^2))) + (-sum(exp(b1+b2*x+b3*(x^2)))) + ((-1/(2*k))*(b1^2))}
-cc_b2 <- function(b1, b2,b3){sum(y*(b1+b2*x+b3*(x^2))) + (-sum(exp(b1+b2*x+b3*(x^2)))) + ((-1/(2*k))*(b2^2))}
-cc_b3 <- function(b1, b2, b3) {sum(y*(b1+b2*x+b3*(x^2))) + (-sum(exp(b1+b2*x+b3*(x^2)))) + ((-1/(2*k))*(b3^2))}
+cc_b1 <- function(b1, b2){sum(y*(b1 + b2*x)) - sum(exp(b1 + b2*x)) + ((-1/(2*k))*(b1^2))}
+cc_b2 <- function(b1, b2){sum(y*(b1 + b2*x)) - sum(exp(b1 + b2*x)) + ((-1/(2*k))*(b2^2))}
+
 
 ```
 
 ```{r}
 #valores iniciais
 b1_am <- b2_am <- b3_am <- rep(NA, N)
-b1_am[1] <- b2_am[1] <- b3_am[1] <- 2
+b1_am[1] <- b2_am[1] <- 2
 
 for(i in 2:N){
     
      #metropolis para b1
      b1 <- rnorm(1, b1_am[i-1], 2) 
      alpha <- min(0, 
-                  cc_b1(b1, 
-                        b2_am[i-1], 
-                        b3_am[i-1]) - cc_b1(b1_am[i-1], 
-                                            b2_am[i-1], 
-                                            b3_am[i-1]))
+                  cc_b1(b1, b2_am[i-1]) - cc_b1(b1_am[i-1], b2_am[i-1]))
      
      if(log(runif(1)) < alpha){
        b1_am[i] <- b1 
        cont_b1 <- cont_b1+1
      }else{
-         b1_am[i] <- b1_am[i-1]}  
+         b1_am[i] <- b1_am[i-1]
+         }  
      
      #metropolis para b2
      b2 <- rnorm(1, b2_am[i-1], 1)
      alpha2 <- min(0, 
-                   cc_b2(b1_am[i], 
-                         b2, 
-                         b3_am[i-1]) - cc_b2(b1_am[i], 
-                                             b2_am[i-1], 
-                                             b3_am[i-1]))
+                   cc_b2(b1_am[i], b2) - cc_b2(b1_am[i], b2_am[i-1]))
      
      if(log(runif(1)) < alpha2){
        b2_am[i] <- b2
        cont_b2 <- cont_b2+1
      }else{
-         b2_am[i] <- b2_am[i-1]}  
-      
-     #metropolis para b3
-     b3 <- rnorm(1, b3_am[i-1], 0.1) 
-     
-     alpha3 <- min(0, 
-                   cc_b3(b1_am[i], 
-                         b2_am[i], 
-                         b3) - cc_b3(b1_am[i], 
-                                     b2_am[i], 
-                                     b3_am[i-1]))
-     if(log(runif(1)) < alpha3){
-       b3_am[i] <- b3
-       cont_b3 <- cont_b3+1
-     }else{
-         b3_am[i] <- b3_am[i-1]}  
+         b2_am[i] <- b2_am[i-1]
+         }  
+  
 }
 
-save.image("covergiu_6mi.RData")
+#save.image("convergiu_6mi.RData")
 ```
 
 ## Verificando convergência 
@@ -113,7 +106,7 @@ save.image("covergiu_6mi.RData")
 #### $\beta_1$
 ```{r}
 
-plot(b1_am, type = "l", lwd = 2, main = "Cadeia de b1")
+plot(b1_am, type = "l", lwd = 2, main = expression(beta[1]))
 #abline(a = b1, b = 0, col = 2)
 
 cont_b1/N
@@ -129,18 +122,18 @@ cont_b2/N
 
 #### $\beta_3$
 ```{r}
-plot(b3_am, type = "l", main = "Cadeia de b3")
-#abline(a = b3, b = 0, col = 2)
-
-cont_b3/N
+# plot(b3_am, type = "l", main = "Cadeia de b3")
+# #abline(a = b3, b = 0, col = 2)
+# 
+# cont_b3/N
 ```
 
 ## Tratamento da cadeia
 ```{r}
-burnin <- 1000000
+burnin <- 200000
 b1_2 <- b1_am[(burnin + 1):N]
 b2_2 <- b2_am[(burnin + 1):N]
-b3_2 <- b3_am[(burnin + 1):N]
+#b3_2 <- b3_am[(burnin + 1):N]
 ```
 
 
@@ -153,20 +146,24 @@ plot(b1_2, type = "l", lwd = 2)
 plot(b2_2, type = "l", lwd = 2)
 ```
 
-
 ```{r}
-plot(b3_2, type = "l")
-```
-
-FAZER ACFS
-```{r}
-thin <- 50
+thin <- 560
 b1_2<-b1_2[seq(1,length(b1_2),by=thin)]
 b2_2<-b2_2[seq(1,length(b2_2),by=thin)]
-b3_2<-b3_2[seq(1,length(b3_2),by=thin)]
+
 ```
 
-A GNT FALA QUE N TA MT LONGE DE 2 E -2
+```{r}
+acf(b1_2)
+```
+
+```{r}
+coda::raftery.diag(b1_2)
+```
+
+```{r}
+coda:: raftery.diag(b2_2)
+```
 
 ## Estimativas pontuais
 
@@ -199,15 +196,11 @@ HPDinterval(as.mcmc(b1_2))
 HPDinterval(as.mcmc(b2_2))
 ```
 
-```{r}
-HPDinterval(as.mcmc(b3_2))
-```
-
 ## Distribuições a posteriori
 ```{r}
 ## olahr do m10 exs gibbs COLEI LOGO AQUI KK
 # par(mfrow=c(1,3))
-# hist(beta0,prob=T,ylab="",xlab="",main=expression(beta[0]))
+# hist(b1_2,prob=T,ylab="",xlab="",main=expression(beta[1]))
 # abline(v=beta0_v,col=2,lty=2,lwd=3)
 # points(media_beta0,0,col=3,lwd=4)
 # points(HPD_beta0[1],0,col=3,lwd=4)
