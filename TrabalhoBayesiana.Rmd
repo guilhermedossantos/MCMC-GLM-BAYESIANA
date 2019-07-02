@@ -7,11 +7,11 @@ output: html_notebook
 ---
 
 ```{r include=FALSE}
-knitr::opts_knit$set(root.dir = "D:\\Users\\201610882-79\\Downloads\\MCMC-GLM-BAYESIANA-master")
+knitr::opts_knit$set(root.dir = "C:\\Users\\ibge\\Downloads\\Bayesiana\\MCMC-GLM-BAYESIANA-master")
 library(coda)
 
 
-#load("convergiu.RData")
+load("covergiu_6mi.RData")
 ```
 
 #Algotitmo de Gibbs usando Metropolis-Hasting para gerar condicionais completas
@@ -195,7 +195,6 @@ median(b3_2)
 HPDinterval(as.mcmc(b1_2))
 ```
 
-
 ```{r}
 HPDinterval(as.mcmc(b2_2))
 ```
@@ -204,10 +203,26 @@ HPDinterval(as.mcmc(b2_2))
 HPDinterval(as.mcmc(b3_2))
 ```
 
-
-
-
+## Distribuições a posteriori
 ```{r}
-
+## olahr do m10 exs gibbs COLEI LOGO AQUI KK
+# par(mfrow=c(1,3))
+# hist(beta0,prob=T,ylab="",xlab="",main=expression(beta[0]))
+# abline(v=beta0_v,col=2,lty=2,lwd=3)
+# points(media_beta0,0,col=3,lwd=4)
+# points(HPD_beta0[1],0,col=3,lwd=4)
+# points(HPD_beta0[2],0,col=3,lwd=4)
+# 
+# hist(beta1,prob=T,ylab="",xlab="",main=expression(beta[1]))
+# abline(v=beta1_v,col=2,lty=2,lwd=3)
+# points(media_beta1,0,col=3,lwd=4)
+# points(HPD_beta1[1],0,col=3,lwd=4)
+# points(HPD_beta1[2],0,col=3,lwd=4)
+# 
+# hist(phi,prob=T,ylab="",xlab="",main=expression(phi))
+# abline(v=phi_v,col=2,lty=2,lwd=3)
+# points(media_phi,0,col=3,lwd=4)
+# points(HPD_phi[1],0,col=3,lwd=4)
+# points(HPD_phi[2],0,col=3,lwd=4)
 ```
 
