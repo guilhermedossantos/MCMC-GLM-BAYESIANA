@@ -1,19 +1,50 @@
 ---
-title: "Trabalho de Bayesiana"
-subtitle: "Ajuste de modelo linear generalizado usando método de monte carlo via cadeias de markov"
-date: "01 de julho de 2019"
+title: "Ajuste de Modelo Linear Generalizado Utilizando o Método de Monte Carlo via Cadeias de Markov"
 author: "Guilherme dos Santos & Isabelle da Costa Oliveira"
-output: html_notebook
+date: "03 de julho de 2019"
+language:
+  label:
+    fig: "Figura"
+    tab: "Tabela"
+output:
+  pdf_document: default
+  html_notebook: default
+
 ---
 
 ```{r include=FALSE}
 knitr::opts_knit$set(root.dir = "C:\\Users\\ibge\\Downloads\\Bayesiana\\MCMC-GLM-BAYESIANA-master")
+
+knitr::opts_chunk$set(echo = FALSE)
+
 library(coda)
+library(kableExtra)
 
-
-#load("covergiu_6mi.RData")
+load("convergiu_3mi.RData")
 ```
 
+# Introdução
+Estamos interessados no ajuste de um modelo linear generalizado usando distribuição Poisson, a função de ligação canônica e o predito linear $\eta_i = \beta_1 + \beta_2i + \beta_3i^2, i = 1, ..., 13$ para o número de casos de AIDS na Bélgica por ano, de 1981 a 1993. Para tal, iremos considerar distribuições a priori independentes e pouco informativas para \textbf{$\theta$} $= (\beta_1, \beta_2, \beta_3)$.
+
+# Distribuições 
+
+Sabemos que:\\
+    $$p(\theta|\underline{y})\propto p(\underline{y}|\theta)p(\theta)$$
+e 
+    $$p(\underline{y}|\theta)= \Pi_{i=1}^{13}\frac{\exp\{y_i(\beta_1 + \beta_2i \}\exp\{-\sum_{i=1}^{13}{\exp(\beta_1 + \beta_2i}\}}{y_i!}$$.
+    
+Propondo $\beta_1, \beta_2$ independentes e identicamentes distribuídas a priri com $\beta_i \sim N(0,k), i = 1,2$. Com variância $k = 200$ para q tenhamos uma distribuição a priori vaga.
+
+Portanto, \\
+
+$$p(\theta|\underline{y}) \propto \Pi_{i=1}^{13} \exp\{y_i(\beta_1 + \beta_2i)\}\exp\{-\sum_{i=1}^{13}{\exp(\beta_1 + \beta_2i )}\}exp{-(\frac{\beta_1}{2k} + \frac{\beta_2}{2k})}$$ 
+é o núcleo da distribuição posteriori desejada.
+
+E (escrever condicionais completas)
+
+
+
+    
 #Algotitmo de Gibbs usando Metropolis-Hasting para gerar condicionais completas
 
 ## Dados
@@ -33,14 +64,14 @@ modelo <- glm(y ~ x, family = poisson)
 summary(modelo)
 ```
 
-### Intervalos de confiança
-```{r}
+### Intervalos de confiança clássicos
+```{r warning=FALSE, message=FALSE}
 confint(modelo)
 ```
 
-## Algoritmos
+## MCMC
 
-```{r}
+```{r eval = F}
 #número de iterações
 N <- 3*10^6
 
@@ -52,20 +83,14 @@ cont_b1 <- 0
 cont_b2 <- 0
 cont_b3 <- 0
 
-#núcleos das condicionais completas (vamos usar o logaritomos por problemas numéricos)
-# cc_b1 <- function(b1,b2,b3){prod(b1 + b2*x + b3*x^2)*exp(-b1*(13 + (b1/(2*k))))}
-# 
-# cc_b2 <- function(b1,b2,b3){prod(b1 + b2*x + b3*x^2)*exp(- b2*(91 + (b2/(2*k))))}
-# 
-# cc_b3 <- function(b1,b2,b3){prod(b1 + b2*x + b3*x^2)*exp(- b3*(819 + (b3/(2*k))))}
-
+## Condicionais completas
 cc_b1 <- function(b1, b2){sum(y*(b1 + b2*x)) - sum(exp(b1 + b2*x)) + ((-1/(2*k))*(b1^2))}
 cc_b2 <- function(b1, b2){sum(y*(b1 + b2*x)) - sum(exp(b1 + b2*x)) + ((-1/(2*k))*(b2^2))}
 
 
 ```
 
-```{r}
+```{r eval = F}
 #valores iniciais
 b1_am <- b2_am <- b3_am <- rep(NA, N)
 b1_am[1] <- b2_am[1] <- 2
@@ -97,38 +122,36 @@ for(i in 2:N){
          }  
   
 }
-
-#save.image("convergiu_6mi.RData")
 ```
 
-## Verificando convergência 
+## Tratamento da cadeia e verificação de convergência
 
-#### $\beta_1$
+#### Gráfico da cadeia de $\beta_1$
 ```{r}
+plot(b1_am, type = "l", 
+     lwd = 2, main = expression(beta[1]), 
+     ylab = expression(beta[1]),
+     xlab = "Iteração")
 
-plot(b1_am, type = "l", lwd = 2, main = expression(beta[1]))
-#abline(a = b1, b = 0, col = 2)
-
-cont_b1/N
 ```
 
-#### $\beta_2$
+#### Gráfico da cadeia de $\beta_2$
 ```{r}
-plot(b2_am, type = "l", lwd = 2, main = "Cadeia de b2")
-#abline(a = b2, b = 0, col = 2)
+plot(b2_am, type = "l", lwd = 2, 
+     main = expression(beta[2]),
+     ylab = expression(beta[2]),
+     xlab = "Iteração")
 
-cont_b2/N
 ```
+  
+  Inspecionando visualmente vemos que ambas as cadeias apresetam convergência. A taxa de aceitação para a cadeira de $\beta_1$ foi de aproximadamente `r round(cont_b1/N,3)`, e para a cadeia de $\beta_2$ foi `r round(cont_b2/N,3)`
+  
+  
+  A seguir apresentamos alguns tratamentos realizados e o uso do critério de Geweke para verificação de convergência.
+  
 
-#### $\beta_3$
-```{r}
-# plot(b3_am, type = "l", main = "Cadeia de b3")
-# #abline(a = b3, b = 0, col = 2)
-# 
-# cont_b3/N
-```
+### Retirada do período de aquecimento e espaçamento da cadeia
 
-## Tratamento da cadeia
 ```{r}
 burnin <- 200000
 b1_2 <- b1_am[(burnin + 1):N]
@@ -136,86 +159,132 @@ b2_2 <- b2_am[(burnin + 1):N]
 #b3_2 <- b3_am[(burnin + 1):N]
 ```
 
+  Consideramos as primeiras `r burnin` observações da cadeia como período de aquecimento. Abaixo seguem os Gráficos das cadeias após a retirada do período de aquecimento.
 
 ```{r}
-plot(b1_2, type = "l", lwd = 2)
+par(mfrow = c(1,2))
+plot(b1_2, type = "l", lwd = 2, main = expression(beta[1]), ylab = "", xlab = "")
+plot(b2_2, type = "l", lwd = 2, main = expression(beta[2]), ylab = "", xlab = "")
 ```
 
-
-```{r}
-plot(b2_2, type = "l", lwd = 2)
-```
+O critério de Raftery (utilizando a função `raftery.diag`) retorna um alto fator de dependência fazendo-se necessário o espaçamento (\textit{thinning}). Com o objetivo de obter uma amostra de tamanho 5000 da posteriori, utilizamos um espaçamento de `r (N-burnin)/5000`.
 
 ```{r}
 thin <- 560
 b1_2<-b1_2[seq(1,length(b1_2),by=thin)]
 b2_2<-b2_2[seq(1,length(b2_2),by=thin)]
+```
 
+Abaixo seguem os resultados dos critérios de Raftery-lewis e Geweke para verificação de convergência e autocorrelação na cadeia.
+
+```{r}
+raftery.diag(b1_2)
 ```
 
 ```{r}
-acf(b1_2)
+raftery.diag(b2_2)
 ```
 
+  Como visto acima, ambos o fator de dependência para ambas as cadeias após espaçamento é menor que 5, indicando um resultado aceitável.
+  
+  Abaixo vemos os resultados do critério de Geweke para ambos os parâmetros.
+  
 ```{r}
-coda::raftery.diag(b1_2)
+geweke.diag(b1_2)
+geweke.diag(b2_2)
 ```
+  
+  Em ambos os casos o resultado de interesse está entre -2 e 2, indicando convergência da cadeia.
+  
+## Estimativas pontuais e Intervalares
+  Como a estimativa pontual do parâmetro depende da função de perda escolhida, aqui optamos por mostrar a média, moda e mediana a posteriori. Uma vez que estas são as estimativas quando as funções de perda quadrática, zero-um e absoluta são usadas, respectivamente, que são funções de perda frequentemente usadas.
 
+### Pontuais
+ - $\beta_1$
+ 
 ```{r}
-coda:: raftery.diag(b2_2)
+
+moda_b1_2 <- as.numeric(names(which.max(table(b1_2))))
+
+rbind.data.frame(mean(b1_2), 
+                 median(b1_2),
+                 moda_b1_2) -> est_pont_b1
+
+colnames(est_pont_b1) <- "Estimativa"
+
+rownames(est_pont_b1) <- c("Média", "Mediana", "Moda")
+
+est_pont_b1 %>% 
+  kable("latex") %>% 
+  kable_styling(full_width = F)
 ```
 
-## Estimativas pontuais
-
-b1
+ - $\beta_2$
 ```{r}
-mean(b1_2)
-median(b1_2)
-(b1_2_1modeda <- as.numeric(names(which.max(table(b1_2)))))
+# mean(b2_2)
+# median(b2_2)
+moda_b2_2 <- as.numeric(names(which.max(table(b2_2))))
+
+rbind.data.frame(mean(b2_2), 
+                 median(b2_2),
+                 moda_b2_2) -> est_pont_b2
+
+colnames(est_pont_b2) <- "Estimativa"
+
+rownames(est_pont_b2) <- c("Média", "Mediana", "Moda")
+
+est_pont_b2 %>% 
+  kable("latex") %>% 
+  kable_styling(full_width = F)
 ```
 
-b2
+
+
+### Intervalos de confiança HPD para $\beta_0$ e $\beta_1$
+
+ - $\beta_1$
 ```{r}
-mean(b2_2)
-median(b2_2)
-(b2_2_1moda <- as.numeric(names(which.max(table(b2_2)))))
+library(TeachingDemos)
+
+HPD_beta_1 <- emp.hpd(as.mcmc(b1_2))
+names(HPD_beta_1) <- c("2.5%", "97.5%")
+t(HPD_beta_1[1:2]) %>% kable("latex") %>% kable_styling(full_width = F)
 ```
 
+ - $\beta_2$
 ```{r}
-mean(b3_2)
-median(b3_2)
-(b2_3_1moda <- as.numeric(names(which.max(table(b3_2)))))
+HPD_beta_2 <- emp.hpd(as.mcmc(b2_2))
+names(HPD_beta_2) <- c("2.5%", "97.5%")
+t(HPD_beta_2[1:2]) %>% kable("latex") %>% kable_styling(full_width = F)
 ```
 
-
-```{r}
-HPDinterval(as.mcmc(b1_2))
-```
-
-```{r}
-HPDinterval(as.mcmc(b2_2))
-```
 
 ## Distribuições a posteriori
+
+ Nos gráficos abaixo vemos os histogramas das distribuições a posteriori de $\beta_1$ e $\beta_2$. A linha tracejada vertical é a estimativa clássica, os pontos no eixo $x$ correspondem aos intervalos de confiança e à média a posteriori (estimativa sob perda quadrática). A linha próxima ao eixo x representa a priori.
+ 
 ```{r}
-## olahr do m10 exs gibbs COLEI LOGO AQUI KK
-# par(mfrow=c(1,3))
-# hist(b1_2,prob=T,ylab="",xlab="",main=expression(beta[1]))
-# abline(v=beta0_v,col=2,lty=2,lwd=3)
-# points(media_beta0,0,col=3,lwd=4)
-# points(HPD_beta0[1],0,col=3,lwd=4)
-# points(HPD_beta0[2],0,col=3,lwd=4)
-# 
-# hist(beta1,prob=T,ylab="",xlab="",main=expression(beta[1]))
-# abline(v=beta1_v,col=2,lty=2,lwd=3)
-# points(media_beta1,0,col=3,lwd=4)
-# points(HPD_beta1[1],0,col=3,lwd=4)
-# points(HPD_beta1[2],0,col=3,lwd=4)
-# 
-# hist(phi,prob=T,ylab="",xlab="",main=expression(phi))
-# abline(v=phi_v,col=2,lty=2,lwd=3)
-# points(media_phi,0,col=3,lwd=4)
-# points(HPD_phi[1],0,col=3,lwd=4)
-# points(HPD_phi[2],0,col=3,lwd=4)
+par(mfrow=c(1,2))
+hist(b1_2,prob=T,ylab="",xlab="",main=expression(beta[1]))
+abline(v=coef(modelo)[1],col = 2,lty = 2,lwd = 3)
+points(mean(b1_2), 0, col = 3, lwd = 4)
+points(HPD_beta_1[1], 0, col = 3, lwd = 4)
+points(HPD_beta_1[2], 0, col = 3, lwd = 4)
+curve(dnorm(x, 0, sqrt(k)), col = 4, add = T)
+
+hist(b2_2,prob=T,ylab="",xlab="",main=expression(beta[2]))
+abline(v=coef(modelo)[2],col=2,lty=2,lwd=3)
+points(mean(b2_2),0,col=3,lwd=4)
+points(HPD_beta_2[1],0,col=3,lwd=4)
+points(HPD_beta_2[2],0,col=3,lwd=4)
+curve(dnorm(x, 0, sqrt(k)), col = 4, add = T)
+
 ```
+
+## Conclusões
+
+  Os algoritmos não apresentaram dificuldades para atingir a convergência. No entanto, as observações estavam altamente correlacionadas, daí, foi necessário realizar um grande número de iterações a fim de utilizar um espaçamento grande para diminuir a autocorrelação da cadeia.
+
+  Vimos que o resultado Bayesiano nesse caso se aproxima do resultádo clássico, o que era esperado uma vez que utilizamos uma distribuição a priori vaga.
+
 
