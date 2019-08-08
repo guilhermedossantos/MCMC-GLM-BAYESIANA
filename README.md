@@ -1,2 +1,2 @@
 # MCMC-GLM-BAYESIANA
-Utilizando inferências Bayesiana para estimar os parâmetros de um MLG
+Utilizando inferência Bayesiana para estimar os parâmetros de um Modelo Linear Generalizado
